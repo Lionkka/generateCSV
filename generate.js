@@ -33,12 +33,7 @@ function generateCSV(fileName, headers, amount) {
                 });
             }
             else {
-
                 ok = file.write(text);
-
-                //if used more 100mb memory
-                if(process.memoryUsage().heapUsed > 100 * 1024 * 1024 )
-                    ok = false;
             }
         } while (i < amount && ok);
 
