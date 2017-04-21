@@ -3,39 +3,51 @@ const fs = require('fs');
 
 const getMemory = setInterval(()=>{
     console.log((process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2), 'mb');
-}, 30);
+}, 300);
 
 function generateCSV(fileName, headers, amount) {
 
-    fs.open(fileName, "w+", function (err, file_handle) {
+    const file =fs.createWriteStream(fileName);
 
-        let text = '';
+    //write headers
+    file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
 
-        //write headers
-        headers.forEach((item, i, arr) => {
-            if (i == (arr.length - 1))
-                text += item;
-            else
-                text += item + ',';
-        });
+    let text = '';
+    let i = 0;
+    write();
 
-        text += '\n';
+    //generate content
+    function write() {
+        let ok = true;
+        do {
 
-        //generate content
-        for (let i = 0; i < amount; i++) {
-            for (let j = 0; j < headers.length; j++) {
-                text += headers[j] + '_' + i;
-                if (j != headers.length - 1)
-                    text += ',';
+            i++;
+            //generate line
+            text = headers.map(field => '"' + field +'_'+i+ '"').join(',') + '\n';
+
+            //if last line => callback
+            if (i == amount) {
+
+                file.write( text, () => {
+                    clearInterval(getMemory);
+                });
             }
-            text += '\n';
-        }
+            else {
 
-        fs.write(file_handle, text);
-        fs.close(file_handle);
-    });
+                ok = file.write(text);
+
+                //if used more 100mb memory
+                if(process.memoryUsage().heapUsed > 100 * 1024 * 1024 )
+                    ok = false;
+            }
+        } while (i < amount && ok);
+
+        if (i < amount) {
+
+            file.once('drain', write);
+        }
+    }
 }
 
 generateCSV('book.csv', ['id', 'title'], 1000000);
 
-//clearInterval(getMemory);
