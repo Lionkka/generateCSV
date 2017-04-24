@@ -12,7 +12,6 @@ function generateCSV(fileName, headers, amount) {
     //write headers
     file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
 
-    let text = '';
     let i = 0;
     write();
 
@@ -23,25 +22,16 @@ function generateCSV(fileName, headers, amount) {
 
             i++;
             //generate line
-            text = headers.map(field => '"' + field +'_'+i+ '"').join(',') + '\n';
+            let text = headers.map(field => '"' + field +'_'+i+ '"').join(',') + '\n';
 
             //if last line => callback
-            if (i == amount) {
-
-                file.write( text, () => {
-                    clearInterval(getMemory);
-                });
-            }
-            else {
-                ok = file.write(text);
-            }
+            if(!file.write(text)){
+                file.once('drain', write);
+                ok = false;
+                }
         } while (i < amount && ok);
-
-        if (i < amount) {
-
-            file.once('drain', write);
-        }
     }
+    getMemory.unref();
 }
 
 generateCSV('book.csv', ['id', 'title'], 1000000);
