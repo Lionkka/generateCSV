@@ -8,9 +8,12 @@ getMemory.unref();
 
 function generateCSV(fileName, headers, amount) {
     return new Promise((resolve, reject) => {
-
+        console.log('Write ' + fileName);
         const file = fs.createWriteStream(fileName);
-        file.on('error', (er)=> reject(er));
+        file.on('error', reject);
+        file.on('close', ()=>{
+            console.log('End write ' + fileName + ' successful');
+            resolve()});
 
         //write headers
         file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
@@ -20,11 +23,13 @@ function generateCSV(fileName, headers, amount) {
         function writeFile(i) {
             writeLine(file, headers, i)
                 .then( () => {
-                    if(i == amount)
-                        resolve();
+                    if(i == amount){
+
+                        file.end();
+                    }
+
                     else {
-                        i++;
-                        writeFile(i);
+                        writeFile(i+1);
                     }}
                 )
                 .catch(reject);
@@ -33,17 +38,22 @@ function generateCSV(fileName, headers, amount) {
 }
 function writeLine(file, headers, i) {
     return new Promise((resolve, reject)=>{
-
         let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
 
         if(!file.write(text)) {
-            file.once('drain', resolve );
+            file.once('drain', () => {
+                resolve();
+            } );
         }
-        else
+        else {
             resolve();
+        }
     });
 }
 
-generateCSV('book.csv', ['id', 'title'], 1000000)
-    .then( done => {console.log('done')})
+generateCSV('book.csv', ['id', 'title'], 1000)
+    .then(generateCSV('authors.csv', ['id', 'firstName', 'lastName'], 1000))
+    .then(()=>{console.log('done')})
     .catch( er => {console.log(er)});
+
+
