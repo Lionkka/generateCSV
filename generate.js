@@ -8,9 +8,13 @@ getMemory.unref();
 
 function generateCSV(fileName, headers, amount) {
 
-    const file = fs.createWriteStream(fileName);
+
 
     return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(fileName);
+        file.on('error', (er)=> reject(er));
+        file.on('close', (er)=> resolve('done'));
+
         //write headers
         file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
 
@@ -30,11 +34,10 @@ function generateCSV(fileName, headers, amount) {
                     file.once('drain', write);
                     ok = false;
                 }
-                if(i == amount)
-                    resolve('done');
+                if (i == amount)
+                    file.close();
             } while (i < amount && ok);
         }
-
 
 
     });
@@ -42,7 +45,7 @@ function generateCSV(fileName, headers, amount) {
 
 generateCSV('book.csv', ['id', 'title'], 1000000)
     .then(
-        done => {console.log('done')},
-        fail => {console.log('fail')}
-    );
+        done => {console.log('done')}
+    )
+    .catch( er => {console.log(er)});
 
