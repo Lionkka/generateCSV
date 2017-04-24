@@ -8,35 +8,36 @@ getMemory.unref();
 
 function generateCSV(fileName, headers, amount) {
     return new Promise((resolve, reject) => {
+
         const file = fs.createWriteStream(fileName);
         file.on('error', (er)=> reject(er));
 
         //write headers
         file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
 
-        let i = 0;
-        writeFile();
+        writeFile(0);
 
-        function writeFile() {
-            let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
-
-            writeLine(file, text)
+        function writeFile(i) {
+            writeLine(file, headers, i)
                 .then( () => {
                     if(i == amount)
-                        resolve('Done');
+                        resolve();
                     else {
                         i++;
-                        writeFile();
+                        writeFile(i);
                     }}
                 )
-                .catch(()=> { file.once('drain', writeFile );  });
+                .catch(reject);
         }
     });
 }
-function writeLine(file, text) {
+function writeLine(file, headers, i) {
     return new Promise((resolve, reject)=>{
+
+        let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
+
         if(!file.write(text)) {
-            reject();
+            file.once('drain', resolve );
         }
         else
             resolve();
