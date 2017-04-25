@@ -7,53 +7,76 @@ const getMemory = setInterval(()=>{
 getMemory.unref();
 
 function generateCSV(fileName, headers, amount) {
-    return new Promise((resolve, reject) => {
-        console.log('Write ' + fileName);
-        const file = fs.createWriteStream(fileName);
-        file.on('error', reject);
-        file.on('close', ()=>{
-            console.log('End write ' + fileName + ' successful');
-            resolve()});
 
-        //write headers
-        file.write(headers.map(field => '"' + field + '"').join(',') + '\n');
+    const openFile = ()=> {
+        return new Promise((resolve, reject)=>{
 
-        writeFile(0);
+            console.log('Write ' + fileName);
 
-        function writeFile(i) {
-            writeLine(file, headers, i)
-                .then( () => {
-                    if(i == amount){
+            fs.open(fileName, 'w+', (err, fd)=> {
+                if(err)
+                    reject(err);
+                else
+                    resolve(fd);
 
-                        file.end();
-                    }
+            });
+        });
+    };
+    const writeHeaders = (file)=> {
+        return new Promise((resolve, reject)=>{
+            fs.write(file, headers.map(field => '"' + field + '"').join(',') + '\n',
+                () => {
+                resolve(file);}
+                );
+        });
+    };
 
-                    else {
-                        writeFile(i+1);
-                    }}
-                )
-                .catch(reject);
-        }
-    });
-}
-function writeLine(file, headers, i) {
-    return new Promise((resolve, reject)=>{
-        let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
-
-        if(!file.write(text)) {
-            file.once('drain', () => {
+    const closeFile = (file)=>{
+        return new Promise((resolve)=>{
+            fs.close(file, ()=>{
+                console.log('End write ' + fileName);
                 resolve();
-            } );
-        }
-        else {
-            resolve();
-        }
-    });
+            });
+        });
+    };
+
+    const writeLine = (file, i)=>{
+        return new Promise((resolve, reject)=>{
+            let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
+            fs.write(file,text,(err)=> {
+                err ? reject(err) : resolve(file);
+            });
+        });
+    };
+    const writeContent = (file) =>{
+        return new Promise( (resolve, reject)=>{
+
+            writeFile(file, 1);
+
+            function writeFile(file, i) {
+                writeLine(file, i)
+                    .then( (file) => {
+                            if(i == amount)
+                                resolve(file);
+
+                            else
+                                writeFile(file, i+1);
+                        }
+                    )
+                    .catch(reject);
+            }
+
+        });
+    };
+
+        return openFile()
+            .then(writeHeaders)
+            .then(writeContent)
+            .then(closeFile);
+
 }
 
 generateCSV('book.csv', ['id', 'title'], 1000)
-    .then(generateCSV('authors.csv', ['id', 'firstName', 'lastName'], 1000))
+    .then(()=> generateCSV('authors.csv', ['id', 'firstName', 'lastName'], 1000))
     .then(()=>{console.log('done')})
-    .catch( er => {console.log(er)});
-
-
+    .catch( err => {console.log(err)});
