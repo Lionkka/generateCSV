@@ -1,6 +1,8 @@
 "use strict";
 //node generate.js --method=stream --dest=books.csv --count=100000 --fields=id,name
 
+const generate_stream = require('./generate_stream');
+const generate_fs = require('./generate_fs');
 const args =  process.argv.slice(2);
 let param = {};
 
@@ -37,19 +39,16 @@ const getMemory = setInterval(()=>{
 }, 300);
 getMemory.unref();
 
-const generate_stream = require('./generate_stream');
-const generate_fs = require('./generate_fs');
-
-let generate = '';
+let generator = '';
 switch (method){
     case('stream'):
-        generate = generate_stream;
+        generator = generate_stream;
         break;
     case ('file'):
-        generate = generate_fs;
+        generator = generate_fs;
         break;
 }
 
-generate(dest, fields, count)
+generator.generate(dest, fields, count)
     .then(()=>{console.log('done')})
     .catch( err => {console.log(err)});
