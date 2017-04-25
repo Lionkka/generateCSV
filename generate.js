@@ -1,82 +1,55 @@
 "use strict";
-const fs = require('fs');
+//node generate.js --method=stream --dest=books.csv --count=100000 --fields=id,name
 
+const args =  process.argv.slice(2);
+let param = {};
+
+//parse params
+args.forEach((item)=>{
+    let arr = item.split('=');
+    let name = arr[0].substring(2);
+    param[name] = arr[1];
+});
+
+//check params
+if(!param['method'] == 'file' && !param['method'] == 'stream'){
+    throw new SyntaxError('Wrong method');
+}
+if( !param['dest']){
+    throw new SyntaxError('Empty destination');
+}
+if( !Number(param['count']) ){
+    throw new SyntaxError('Wrong count');
+}
+if( !param['fields']){
+    throw new SyntaxError('Empty fields');
+}
+
+//init params
+let method = param['method'];
+let dest = param['dest'];
+let count = param['count'];
+let fields = param['fields'].split(',');
+
+//start measure memory
 const getMemory = setInterval(()=>{
     console.log((process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2), 'mb');
 }, 300);
 getMemory.unref();
 
-function generateCSV(fileName, headers, amount) {
+const generate_stream = require('./generate_stream');
+const generate_fs = require('./generate_fs');
 
-    const openFile = ()=> {
-        return new Promise((resolve, reject)=>{
-
-            console.log('Write ' + fileName);
-
-            fs.open(fileName, 'w+', (err, fd)=> {
-                if(err)
-                    reject(err);
-                else
-                    resolve(fd);
-
-            });
-        });
-    };
-    const writeHeaders = (file)=> {
-        return new Promise((resolve, reject)=>{
-            fs.write(file, headers.map(field => '"' + field + '"').join(',') + '\n',
-                () => {
-                resolve(file);}
-                );
-        });
-    };
-
-    const closeFile = (file)=>{
-        return new Promise((resolve)=>{
-            fs.close(file, ()=>{
-                console.log('End write ' + fileName);
-                resolve();
-            });
-        });
-    };
-
-    const writeLine = (file, i)=>{
-        return new Promise((resolve, reject)=>{
-            let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
-            fs.write(file,text,(err)=> {
-                err ? reject(err) : resolve(file);
-            });
-        });
-    };
-    const writeContent = (file) =>{
-        return new Promise( (resolve, reject)=>{
-
-            writeFile(file, 1);
-
-            function writeFile(file, i) {
-                writeLine(file, i)
-                    .then( (file) => {
-                            if(i == amount)
-                                resolve(file);
-
-                            else
-                                writeFile(file, i+1);
-                        }
-                    )
-                    .catch(reject);
-            }
-
-        });
-    };
-
-        return openFile()
-            .then(writeHeaders)
-            .then(writeContent)
-            .then(closeFile);
-
+let generate = '';
+switch (method){
+    case('stream'):
+        generate = generate_stream;
+        break;
+    case ('file'):
+        generate = generate_fs;
+        break;
 }
 
-generateCSV('book.csv', ['id', 'title'], 1000)
-    .then(()=> generateCSV('authors.csv', ['id', 'firstName', 'lastName'], 1000))
+generate(dest, fields, count)
     .then(()=>{console.log('done')})
     .catch( err => {console.log(err)});
