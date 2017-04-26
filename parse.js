@@ -15,7 +15,7 @@ saveObj._transform = getObj;
 parseCSV('books.csv');
 function parseCSV(path) {
 
-    const writeFilePath = path.replace(/\.[^.]+$/, "") + '.json';
+    const writeFilePath = path.replace(/\.[^.]+$/, ".json");
     const readFile = fs.createReadStream( path,  'utf-8');
     const writeFile = fs.createWriteStream( writeFilePath , 'utf-8');
 
@@ -27,14 +27,17 @@ function parseCSV(path) {
     writeFile.on('error', (err)=>{
         console.error(err);
     });
-    readFile.on('end', () => {
+    /*readFile.on('end', () => {
         writeFile.end(']');
+    });*/
+    writeFile.on('close',()=>{
+        fs.appendFile(writeFilePath,']');
     });
 
     readFile
         .pipe(newLine)
         .pipe(saveObj)
-        .pipe(writeFile );
+        .pipe(writeFile);
 
 }
 
@@ -47,6 +50,7 @@ function getLine(chunk, encoding, done) {
 
     // if has break add to last item
     if(hasBreak){
+
         data[0] = notCompleteObj + data[0];
         notCompleteObj = '';
         hasBreak = false;
@@ -63,9 +67,9 @@ function getLine(chunk, encoding, done) {
     let lastItem = data[data.length-1];
     let latObj = lastItem.split(',');
 
-    if( lastItem[0] !== '"' || lastItem[lastItem.length -1] !== '"' || latObj.length !== headers.length || lastItem[0] !== lastItem[lastItem.length -1]){
+    // "fg","
+    if( lastItem[0] !== '"' || lastItem[lastItem.length -1] !== '"' || latObj.length !== headers.length){
         notCompleteObj = lastItem;
-
         hasBreak = true;
         data = data.slice(0, data.length-1);
     }
