@@ -16,6 +16,7 @@ let headers = {'books': [], 'authors': []};
 let closeStatus = {'books': false, 'authors': false};
 let isFirstLine = true;
 let isClosedFiles = {'books': false, 'authors': false};
+let isLastIteration = false;
 
 const booksFile = fs.createReadStream( 'books.csv' ,  'utf-8');
 const authorsFile = fs.createReadStream( 'authors.csv' , 'utf-8');
@@ -31,9 +32,9 @@ authorsFile.on('data', (chunk)=> { authorsFile.pause(); getChunk('authors' , chu
 booksFile.on('error', (err)=> { console.error(); });
 authorsFile.on('error', (err)=> { console.error();  });
 
-booksFile.on('close', ()=> { closeFiles('books') });
-authorsFile.on('close', ()=> { closeFiles('authors')  });
-
+booksFile.on('close', ()=> { closeFiles('books') ; isClosedFiles['books'] = true });
+authorsFile.on('close', ()=> { closeFiles('authors') ; isClosedFiles['authors'] = true});
+BTAFile.on('close',()=>{console.log(']')});
 createBTA();
 
 function getChunk(fileName, chunk) {
@@ -86,9 +87,17 @@ function getChunk(fileName, chunk) {
     createBTA();
 }
 function createBTA() {
-
     let books = filesParts['books'];
     let authors = filesParts['authors'];
+    if(isLastIteration)
+        return false;
+    //is last iteration?
+    if(isClosedFiles['books'] && books.length === 0 || isClosedFiles['authors'] && authors.length === 0){
+        isLastIteration = true;
+        console.log('write ]');
+        BTAFile.write(']');
+        return false;
+    }
 
     if(!books.length && closeStatus['books'] === false){
         booksFile.resume();
@@ -99,9 +108,22 @@ function createBTA() {
         return false;
     }
 
-    let obj = {};
-    obj = books.splice(0, 1)[0];
-    obj['authors'] = authors.splice(0,3);
+    let randomBook = getRandomItem(0,books.length - 1);
+    //console.log('books length:', books.length, 'random book: ', randomBook);
+    let obj = books.splice(randomBook, 1)[0];
+
+    let randomCount = getRandomItem(1,4);
+    if(authors.length < randomCount)
+        randomCount = authors.length;
+
+    obj['authors'] = [];
+    for(let i = 0; i < randomCount; i++){
+
+        let randomAuthor = getRandomItem(0,authors.length - 1);
+        obj['authors'].push(authors.splice(randomAuthor,1)[0]);
+        //console.log('authors length:', authors.length, 'item:', randomAuthor, 'count:', i);
+    }
+
     if(!isFirstLine)
         BTAFile.write(',\n');
     isFirstLine = false;
@@ -109,11 +131,12 @@ function createBTA() {
     BTAFile.write(JSON.stringify(obj));
 
     createBTA();
-
-
 }
 
 function closeFiles(closeFile) {
     console.log( closeFile, 'file is closed');
-    fs.appendFile('books-to-authors.json',']');
+    createBTA();
+}
+function getRandomItem(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
 }
