@@ -2,15 +2,20 @@
 const fs = require('fs');
 const stream = require('stream');
 
-let newLine = new stream.Transform();
-let saveObj = new stream.Transform();
+const getMemory = setInterval(()=>{
+    console.log((process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2), 'mb');
+}, 300);
+getMemory.unref();
+
+let getStingObjT = new stream.Transform();
+let saveObjT = new stream.Transform();
 let isHeaders = true;
 let headers = [];
 let notCompleteObj = '';
 let hasBreak = false;
 let notFirstObj = false;
-newLine._transform = getLine;
-saveObj._transform = getObj;
+getStingObjT._transform = getStingObj;
+saveObjT._transform = saveObj;
 
 parseCSV('books.csv');
 function parseCSV(path) {
@@ -27,21 +32,18 @@ function parseCSV(path) {
     writeFile.on('error', (err)=>{
         console.error(err);
     });
-    /*readFile.on('end', () => {
-        writeFile.end(']');
-    });*/
     writeFile.on('close',()=>{
         fs.appendFile(writeFilePath,']');
     });
 
     readFile
-        .pipe(newLine)
-        .pipe(saveObj)
+        .pipe(getStingObjT)
+        .pipe(saveObjT)
         .pipe(writeFile);
 
 }
 
-function getLine(chunk, encoding, done) {
+function getStingObj(chunk, encoding, done) {
     let data = chunk.toString().split('\n');
 
     //cut empty item
@@ -67,7 +69,7 @@ function getLine(chunk, encoding, done) {
     let lastItem = data[data.length-1];
     let latObj = lastItem.split(',');
 
-    // "fg","
+    // TODO check element "fg","
     if( lastItem[0] !== '"' || lastItem[lastItem.length -1] !== '"' || latObj.length !== headers.length){
         notCompleteObj = lastItem;
         hasBreak = true;
@@ -81,7 +83,7 @@ function getLine(chunk, encoding, done) {
     done();
 }
 
-function getObj(chunk, encoding, done) {
+function saveObj(chunk, encoding, done) {
     let arr = chunk.toString().split(',');
 
     //cut ""
@@ -96,7 +98,7 @@ function getObj(chunk, encoding, done) {
     });
 
     //if not first item add comma
-    notFirstObj ? this.push(', \n') : notFirstObj = true;
+    notFirstObj ? this.push(',') : notFirstObj = true;
     this.push(JSON.stringify(object));
 
     done();

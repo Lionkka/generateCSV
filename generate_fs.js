@@ -62,7 +62,7 @@ function generateCSVFS (fileName, headers, amount){
         .then(writeHeaders)
         .then(writeContent)
         .then(closeFile);
-};
+}
 
 module.exports = {
     generate: generateCSVFS
