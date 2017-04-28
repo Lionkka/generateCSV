@@ -10,6 +10,8 @@ getMemory.unref();
 
 let generateBooksObjT = stream.Transform();
 let createBooksPartT = stream.Transform();
+let generateAuthorsObjT = stream.Transform();
+let createAuthorsPartT = stream.Transform();
 
 let notCompleteObjs = {'books': false, 'authors': false};
 let hasBreaks = {'books': false, 'authors': false};
@@ -18,39 +20,78 @@ let isHeaders = {'books': true, 'authors': true};
 let headers = {'books': [], 'authors': []};
 let closeStatus = {'books': false, 'authors': false};
 let isFirstLine = true;
-let isClosedFiles = {'books': false, 'authors': false};
+let isFinishCreate = {'books': false, 'authors': false};
+let isFinishGenerate = {'books': false, 'authors': false};
 let isLastIteration = false;
-let parts = {'books': [], 'authors': []};
 
-const booksFile = fs.createReadStream( 'books.csv' ,  'utf-8');
-const authorsFile = fs.createReadStream( 'authors.csv' , 'utf-8');
+const booksStream = fs.createReadStream( 'books.csv' ,  'utf-8');
+const authorsStream = fs.createReadStream( 'authors.csv' , 'utf-8');
 const BTAFile = fs.createWriteStream( 'books-to-authors.json' , 'utf-8');
 BTAFile.write('[');
 
 generateBooksObjT._transform = generateBooksObj;
 createBooksPartT._transform = createBooksPart;
+generateAuthorsObjT._transform = generateAuthorsObj;
+createAuthorsPartT._transform = createAuthorsPart;
 
-booksFile
-    .pipe(generateBooksObjT)
-    .pipe(createBooksPartT)
-    .pipe(BTAFile);
-/*booksFile.on('data', (chunk)=> { booksFile.pause(); getChunk('books' , chunk);  });
-authorsFile.on('data', (chunk)=> { authorsFile.pause(); getChunk('authors' , chunk);  });
+const booksGenerateStream = booksStream
+    .pipe(generateBooksObjT);
+const booksCreateBooksStream = booksGenerateStream.pipe(createBooksPartT);
 
-booksFile.on('error', (err)=> { console.error(); });
-authorsFile.on('error', (err)=> { console.error();  });
+const authorsGenerateStream = authorsStream
+    .pipe(generateAuthorsObjT);
+const booksCreateAuthorsStream = authorsGenerateStream.pipe(createAuthorsPartT);
 
-booksFile.on('close', ()=> { closeFiles('books') ; isClosedFiles['books'] = true });
-authorsFile.on('close', ()=> { closeFiles('authors') ; isClosedFiles['authors'] = true});
-BTAFile.on('close',()=>{console.log(']')});*/
+
+booksCreateBooksStream.on('error', (err)=> { console.error(err); });
+booksCreateAuthorsStream.on('error', (err)=> { console.error(err);  });
+
+booksCreateBooksStream.on('finish', ()=> { closeFiles('books')  });
+booksCreateAuthorsStream.on('finish', ()=> { closeFiles('authors') });
+
+booksGenerateStream.on('finish', ()=> {  isFinishGenerate['books'] = true });
+authorsGenerateStream.on('finish', ()=> {  isFinishGenerate['authors'] = true});
+
+function closeFiles(fileName) {
+    isFinishCreate[fileName] = true;
+     if(isFinishCreate['books'] || isFinishCreate['authors'])
+        BTAFile.write(']');
+
+    console.log(fileName, 'close');
+}
 
 function createBTA() {
+
     let books = filesParts['books'];
     let authors = filesParts['authors'];
+
+    while (books.length > 0 && authors.length > 0){
+        let obj = books.splice(0, 1)[0];
+
+        let randomCount = getRandomItem(1,4);
+        if(authors.length < randomCount)
+            randomCount = authors.length;
+
+        obj['authors'] = [];
+        for(let i = 0; i < randomCount; i++){
+
+            let randomAuthor = getRandomItem(0,authors.length - 1);
+            obj['authors'].push(authors.splice(randomAuthor,1)[0]);
+            //console.log('authors length:', authors.length, 'item:', randomAuthor, 'count:', i);
+        }
+
+        if(!isFirstLine)
+            BTAFile.write(',\n');
+        isFirstLine = false;
+
+        BTAFile.write(JSON.stringify(obj));
+    }
+
     if(isLastIteration)
         return false;
     //is last iteration?
-    if(isClosedFiles['books'] && books.length === 0 || isClosedFiles['authors'] && authors.length === 0){
+    if(isFinishCreate['books'] && books.length === 0 || isFinishCreate['authors'] && authors.length === 0){
+        console.log('if closed ');
         isLastIteration = true;
         console.log('write ]');
         BTAFile.write(']');
@@ -58,43 +99,15 @@ function createBTA() {
     }
 
     if(!books.length && closeStatus['books'] === false){
-        booksFile.resume();
+        generateBooksObjT.resume();
         return false;
     }
     if(authors.length < 2 && closeStatus['authors'] === false){
-        authorsFile.resume();
+        generateAuthorsObjT.resume();
         return false;
     }
 
-    let randomBook = getRandomItem(0,books.length - 1);
-    //console.log('books length:', books.length, 'random book: ', randomBook);
-    let obj = books.splice(randomBook, 1)[0];
-
-    let randomCount = getRandomItem(1,4);
-    if(authors.length < randomCount)
-        randomCount = authors.length;
-
-    obj['authors'] = [];
-    for(let i = 0; i < randomCount; i++){
-
-        let randomAuthor = getRandomItem(0,authors.length - 1);
-        obj['authors'].push(authors.splice(randomAuthor,1)[0]);
-        //console.log('authors length:', authors.length, 'item:', randomAuthor, 'count:', i);
-    }
-
-    if(!isFirstLine)
-        BTAFile.write(',\n');
-    isFirstLine = false;
-
-    BTAFile.write(JSON.stringify(obj));
-
-    createBTA();
 }
-
-function getRandomItem(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
 
 function generateBooksObj(chunk, encoding, done) {
 
@@ -110,6 +123,22 @@ function generateBooksObj(chunk, encoding, done) {
     done();
 
 }
+
+function generateAuthorsObj(chunk, encoding, done) {
+
+    let data = correctData('authors', chunk.toString());
+    const self = this;
+
+    data.forEach((line)=>{
+        let arr = line.split(',').map((item)=>{ return item.slice(1, -1); });
+        let obj = {};
+        arr.forEach((item, i)=>{ obj[headers['authors'][i]] = item; });
+        self.push(JSON.stringify(obj));
+    });
+    done();
+
+}
+
 function correctData(fileName, chunk) {
 
     let data = chunk.split('\n');
@@ -144,13 +173,24 @@ function correctData(fileName, chunk) {
     return data;
 
 }
-function createBooksPart(chunk, encoding, done) {
 
-    if(parts['books'].length < 40){
-        parts['books'].push(JSON.parse(chunk.toString()));
-        console.log(chunk.toString());
-        this.push(chunk);
+function createBooksPart(chunk, encoding, done) {
+    filesParts['books'].push(JSON.parse(chunk.toString()));
+    if(filesParts['books'].length > 30 || isFinishGenerate['books']){
+        generateBooksObjT.pause();
+        createBTA();
     }
-    else generateBooksObjT.pause();
     done();
+}
+function createAuthorsPart(chunk, encoding, done) {
+
+    filesParts['authors'].push(JSON.parse(chunk.toString()));
+    if(filesParts['authors'].length > 120 ||isFinishGenerate['authors']){
+        generateAuthorsObjT.pause();
+        createBTA();
+    }
+    done();
+}
+function getRandomItem(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
 }
