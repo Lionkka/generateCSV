@@ -46,16 +46,18 @@ const booksCreateAuthorsStream = authorsGenerateStream.pipe(createAuthorsPartT);
 booksCreateBooksStream.on('error', (err)=> { console.error(err); });
 booksCreateAuthorsStream.on('error', (err)=> { console.error(err);  });
 
-booksCreateBooksStream.on('finish', ()=> { closeFiles('books')  });
-booksCreateAuthorsStream.on('finish', ()=> { closeFiles('authors') });
+booksCreateBooksStream.on('finish', ()=> { closeFiles('books');  });
+booksCreateAuthorsStream.on('finish', ()=> { closeFiles('authors'); });
 
-booksGenerateStream.on('finish', ()=> {  isFinishGenerate['books'] = true });
-authorsGenerateStream.on('finish', ()=> {  isFinishGenerate['authors'] = true});
+booksGenerateStream.on('finish', ()=> {  isFinishGenerate['books'] = true;  });
+authorsGenerateStream.on('finish', ()=> {  isFinishGenerate['authors'] = true;   });
 
 function closeFiles(fileName) {
+    createBTA();
+    BTAFile.write(']');
     isFinishCreate[fileName] = true;
      if(isFinishCreate['books'] || isFinishCreate['authors'])
-        BTAFile.write(']');
+
 
     console.log(fileName, 'close');
 }
@@ -68,7 +70,7 @@ function createBTA() {
     while (books.length > 0 && authors.length > 0){
         let obj = books.splice(0, 1)[0];
 
-        let randomCount = getRandomItem(1,4);
+        let randomCount = getRandomItem(1,5);
         if(authors.length < randomCount)
             randomCount = authors.length;
 
@@ -182,15 +184,17 @@ function createBooksPart(chunk, encoding, done) {
     }
     done();
 }
+
 function createAuthorsPart(chunk, encoding, done) {
 
     filesParts['authors'].push(JSON.parse(chunk.toString()));
-    if(filesParts['authors'].length > 120 ||isFinishGenerate['authors']){
+    if(filesParts['authors'].length > 120 || isFinishGenerate['authors']){
         generateAuthorsObjT.pause();
         createBTA();
     }
     done();
 }
+
 function getRandomItem(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
