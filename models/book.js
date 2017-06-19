@@ -13,9 +13,9 @@ const schema = new Schema({
         trim: true,
         required: true
     },
-    authors: {
-        type: Array,
-        trim: true
-    }
+    authors: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Author'
+    }]
 });
 module.exports = mongoose.model('Book', schema);

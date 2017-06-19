@@ -83,34 +83,55 @@ function closeFiles(fileName) {
             .then(writeLast)
             .catch(console.error))
         .then(() => console.log('done write json'))
-        .then(authorsByBook)
         //find all authors for book
+        .then(authorsByBook)
         .then((authorsByBook) => console.log('authorsByBook', authorsByBook))
         //find all books for author
         .then(bookByAuthor)
         .then((bookByAuthor) => console.log('bookByAuthor', bookByAuthor))
         //find 10 first books with populated authors list
         .then(firstTenBooks)
-        .then((firstTenBooks) => console.log('firstTenBooks', firstTenBooks[0], firstTenBooks[0].populated('authors')))
+        .then((firstTenBooks) => console.log('firstTenBooks', firstTenBooks[0]))
         //skip 10 first authors and find all books for each next 3 authors
         .then(skipTenAuthors)
         .then((skipTenAuthors) => console.log('skipTenAuthors', skipTenAuthors))
         .then(() => {
 
+        console.log('end');
             //return Book.findOne('')
 
         });
 }
 //skip 10 first authors and find all books for each next 3 authors
 function skipTenAuthors() {
-    return Author.find({}).skip(10).limit(3)
-        .then((authors) =>{
-            return Promise.all(authors.map((item) => bookByAuthor(item.id)))
-        });
+    return new Promise((resolve, reject)=>{
+        let skip = 10;
+        getBooks();
+        function getBooks(books = []) {
+            Promise.resolve(books)
+                .then((books)=>{
+                    return Author.find({}).skip(skip).limit(3)
+                        .then((authors) =>{
+                            return Promise.all(authors.map((item) => bookByAuthor(item.id)))
+                                .then((foundBooks)=>{
+                                    foundBooks = foundBooks.filter(item=> item);
+                                    foundBooks.forEach(item=> books.push(item));
+
+                                    if(books.length < 3){
+                                        skip += 3;
+                                        getBooks(books);
+                                    }
+                                    else resolve(books);
+                                })
+                        });
+                });
+        }
+
+    });
 }
 //find 10 first books with populated authors list
 function firstTenBooks() {
-    return Book.find({}).limit(20).populate('authors')
+    return Book.find({}).limit(10).populate('authors')
 
 }
 //find all books for author
