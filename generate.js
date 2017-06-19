@@ -14,7 +14,7 @@ args.forEach((item)=>{
 });
 
 //check params
-if(!param['method'] == 'file' && !param['method'] == 'stream'){
+if(!param['method'] === 'file' && !param['method'] === 'stream'){
     throw new SyntaxError('Wrong method');
 }
 if( !param['dest']){

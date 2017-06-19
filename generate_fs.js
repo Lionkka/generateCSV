@@ -1,4 +1,5 @@
 const fs = require('fs');
+
 function generateCSVFS (fileName, headers, amount){
     const openFile = () => {
         return new Promise((resolve, reject) => {
@@ -33,6 +34,7 @@ function generateCSVFS (fileName, headers, amount){
     const writeLine = (file, i) => {
         return new Promise((resolve, reject) => {
             let text = headers.map(field => '"' + field + '_' + i + '"').join(',') + '\n';
+
             fs.write(file, text, (err) => {
                 err ? reject(err) : resolve(file);
             });
