@@ -100,7 +100,8 @@ function closeFiles(fileName) {
         console.log('end');
             //return Book.findOne('')
 
-        });
+        })
+        .catch(console.error);
 }
 //skip 10 first authors and find all books for each next 3 authors
 function skipTenAuthors() {
