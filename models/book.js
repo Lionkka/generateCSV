@@ -17,5 +17,8 @@ const schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Author'
     }]
-});
+},
+    {
+        timestamps: true
+    });
 module.exports = mongoose.model('Book', schema);

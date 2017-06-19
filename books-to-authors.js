@@ -84,22 +84,19 @@ function closeFiles(fileName) {
             .catch(console.error))
         .then(() => console.log('done write json'))
         //find all authors for book
-        .then(authorsByBook)
-        .then((authorsByBook) => console.log('authorsByBook', authorsByBook))
-        //find all books for author
-        .then(bookByAuthor)
-        .then((bookByAuthor) => console.log('bookByAuthor', bookByAuthor))
-        //find 10 first books with populated authors list
-        .then(firstTenBooks)
-        .then((firstTenBooks) => console.log('firstTenBooks', firstTenBooks[0]))
-        //skip 10 first authors and find all books for each next 3 authors
-        .then(skipTenAuthors)
-        .then((skipTenAuthors) => console.log('skipTenAuthors', skipTenAuthors))
+        // .then(authorsByBook)
+        // .then((authorsByBook) => console.log('authorsByBook', authorsByBook))
+        // //find all books for author
+        // .then(bookByAuthor)
+        // .then((bookByAuthor) => console.log('bookByAuthor', bookByAuthor))
+        // //find 10 first books with populated authors list
+        // .then(firstTenBooks)
+        // .then((firstTenBooks) => console.log('firstTenBooks', firstTenBooks[0]))
+        // //skip 10 first authors and find all books for each next 3 authors
+        // .then(skipTenAuthors)
+        // .then((skipTenAuthors) => console.log('skipTenAuthors', skipTenAuthors))
         .then(() => {
-
-        console.log('end');
-            //return Book.findOne('')
-
+            console.log('end');
         })
         .catch(console.error);
 }

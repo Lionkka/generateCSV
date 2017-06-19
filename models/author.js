@@ -9,7 +9,7 @@ const schema = new Schema({
         unique:true
     },
     firstName:{
-        type:String,
+        type: String,
         trim: true,
         required: true
     },
@@ -18,5 +18,9 @@ const schema = new Schema({
         trim: true,
         required: true
     }
-});
+},
+    {
+        timestamps: true
+    }
+);
 module.exports =  mongoose.model('Author', schema);
